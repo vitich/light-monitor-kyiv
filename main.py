@@ -58,7 +58,6 @@ def format_hours(hours: float) -> str:
     if hours == int(hours):
         hours = int(hours)
     
-    # Wrap number in bold tags
     if isinstance(hours, float):
         return f"<b>{hours}</b> години"
     
@@ -377,15 +376,35 @@ def format_schedule_message(
     return "\n".join(lines)
 
 
+def format_single_source_message(data: dict, date: datetime, source: str) -> Optional[str]:
+    """Format message for a single source"""
+    if not data:
+        return None
+    
+    slots = data.get("slots")
+    status = data.get("status")
+    
+    if status == "normal" and slots:
+        periods = slots_to_periods(slots)
+        return format_schedule_message(periods, date, [source])
+    elif status == "pending":
+        return format_schedule_message([], date, [source], "pending")
+    elif status == "emergency":
+        return format_schedule_message([], date, [source], "emergency")
+    
+    return None
+
+
 def format_group_message(
     group: str,
     github_schedules: dict,
     yasno_schedules: dict
 ) -> Optional[str]:
-    """Format message for one group"""
+    """Format message for one group - always show both sources if they differ"""
     group_num = group.replace("GPV", "")
     header = f"============ група {group_num} ============"
     
+    # Collect all dates from both sources
     all_dates = set()
     if group in github_schedules:
         all_dates.update(github_schedules[group].keys())
@@ -402,36 +421,48 @@ def format_group_message(
         github_data = github_schedules.get(group, {}).get(date_str)
         yasno_data = yasno_schedules.get(group, {}).get(date_str)
         
-        github_slots = github_data["slots"] if github_data else None
-        yasno_slots = yasno_data["slots"] if yasno_data else None
-        github_status = github_data["status"] if github_data else None
-        yasno_status = yasno_data["status"] if yasno_data else None
+        # Determine date from available source
+        date = None
+        if github_data:
+            date = github_data["date"]
+        elif yasno_data:
+            date = yasno_data["date"]
         
-        date = (github_data or yasno_data)["date"]
+        if not date:
+            continue
         
-        if yasno_status == "emergency":
-            msg = format_schedule_message([], date, [SOURCE_YASNO], "emergency")
-            day_messages.append(msg)
-        elif github_slots and yasno_slots and schedules_match(github_slots, yasno_slots):
+        github_slots = github_data.get("slots") if github_data else None
+        yasno_slots = yasno_data.get("slots") if yasno_data else None
+        github_status = github_data.get("status") if github_data else None
+        yasno_status = yasno_data.get("status") if yasno_data else None
+        
+        # Check if both sources have normal slots and they match
+        both_normal = (
+            github_status == "normal" and 
+            yasno_status == "normal" and 
+            github_slots and 
+            yasno_slots
+        )
+        
+        if both_normal and schedules_match(github_slots, yasno_slots):
+            # Data matches exactly - show single combined block
             periods = slots_to_periods(github_slots)
             msg = format_schedule_message(periods, date, [SOURCE_GITHUB, SOURCE_YASNO])
             day_messages.append(msg)
         else:
-            if github_slots:
-                periods = slots_to_periods(github_slots)
-                msg = format_schedule_message(periods, date, [SOURCE_GITHUB])
-                day_messages.append(msg)
-            elif github_status == "pending":
-                msg = format_schedule_message([], date, [SOURCE_GITHUB], "pending")
-                day_messages.append(msg)
+            # Data differs or special status - show both sources separately
             
-            if yasno_slots:
-                periods = slots_to_periods(yasno_slots)
-                msg = format_schedule_message(periods, date, [SOURCE_YASNO])
-                day_messages.append(msg)
-            elif yasno_status == "pending" and github_status != "pending":
-                msg = format_schedule_message([], date, [SOURCE_YASNO], "pending")
-                day_messages.append(msg)
+            # GitHub block
+            if github_data:
+                msg = format_single_source_message(github_data, date, SOURCE_GITHUB)
+                if msg:
+                    day_messages.append(msg)
+            
+            # Yasno block
+            if yasno_data:
+                msg = format_single_source_message(yasno_data, date, SOURCE_YASNO)
+                if msg:
+                    day_messages.append(msg)
     
     if not day_messages:
         return None
@@ -584,9 +615,11 @@ def main():
     # Always fetch from both sources
     print("\nFetching GitHub data...")
     github_data = fetch_github_data(region)
+    print(f"GitHub data: {'OK' if github_data else 'FAILED'}")
     
     print("Fetching Yasno API data...")
     yasno_data = fetch_yasno_data(yasno_region_id, yasno_dso_id)
+    print(f"Yasno data: {'OK' if yasno_data else 'FAILED'}")
     
     if not github_data and not yasno_data:
         print("Failed to fetch data from both sources")
@@ -596,15 +629,25 @@ def main():
     github_schedules = extract_github_schedules(github_data, groups) if github_data else {}
     yasno_schedules = extract_yasno_schedules(yasno_data, groups) if yasno_data else {}
     
+    print(f"\nGitHub schedules: {list(github_schedules.keys())}")
+    for group, dates in github_schedules.items():
+        for date_str, data in dates.items():
+            print(f"  {group} / {date_str}: status={data['status']}")
+    
+    print(f"Yasno schedules: {list(yasno_schedules.keys())}")
+    for group, dates in yasno_schedules.items():
+        for date_str, data in dates.items():
+            print(f"  {group} / {date_str}: status={data['status']}")
+    
     # Convert to cache format and compare
     new_cache = schedules_to_cache_format(github_schedules, yasno_schedules)
     old_cache = load_cached_schedules()
     
     if not schedules_changed(new_cache, old_cache):
-        print("No changes detected in schedules")
+        print("\nNo changes detected in schedules")
         return
     
-    print("Schedule changes detected!")
+    print("\nSchedule changes detected!")
     
     # Format message
     message = format_full_message(github_schedules, yasno_schedules, groups)
