@@ -45,8 +45,8 @@
     },
     "format": {
       "header_template": "========== ◉ {group} ◉ ==========",
-      "separator_source": "✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧",
-      "separator_day": "■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■",
+      "separator_source": "\n✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧",
+      "separator_day": "\n\n■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■",
       "table_separator": "-"
     }
   }
