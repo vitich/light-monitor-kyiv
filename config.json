@@ -2,8 +2,7 @@
   "settings": {
     "region": "kyiv",
     "groups": [
-      "GPV18.1",
-      "GPV22.1"
+      "GPV18.1"
     ],
     "style": "table",
     "max_messages": 3,
