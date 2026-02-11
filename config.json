@@ -1,7 +1,10 @@
 {
   "settings": {
     "region": "kyiv",
-    "groups": ["GPV12.1", "GPV18.1"],
+    "groups": [
+      "GPV12.1",
+      "GPV18.1"
+    ],
     "style": "table",
     "max_messages": 3,
     "show_intervals_detail": true
@@ -26,7 +29,7 @@
       "off": "✖️",
       "on_list": "🟩",
       "off_list": "🟠",
-      "emergency": "🚨",
+      "emergency": "⚠️",
       "pending": "⏳",
       "separator": "⠅",
       "light_on": "☀",
@@ -45,14 +48,18 @@
       "hours_short": "год."
     },
     "format": {
-      "header_template": "========== ◉ {group} ◉ ==========",
-      "separator_source": "✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧",
-      "separator_day": "■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■",
+      "header_template": "========== ❖ {group} ❖ ==========",
+      "separator_source": "✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧ ✧",
+      "separator_day": "■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■",
+      "separator_footer": "────────────────────",
       "table_separator": "-"
     },
     "spacing": {
       "before_separator_source": 1,
-      "before_separator_day": 2
+      "before_separator_day": 2,
+      "before_summary": 1,
+      "before_footer": 2,
+      "after_footer_separator": 1
     }
   }
 }
